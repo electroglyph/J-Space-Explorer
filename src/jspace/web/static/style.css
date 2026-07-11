@@ -220,3 +220,22 @@ button.secondary:hover { border-color: var(--accent); filter: none; }
 .tour-pop:active { cursor: grabbing; }
 .tour-pop h3::after { content: " \2725"; color: var(--muted); font-size: .7em; font-weight: 400; }
 .tour-pop button, .tour-pop a { cursor: pointer; }
+
+/* ===================== Branching ===================== */
+.atom .acts .branch-btn { color: var(--accent-2); border-color: var(--accent-2); }
+.atom .acts .branch-btn:hover { color: #fff; background: var(--accent-2); border-color: var(--accent-2); }
+.branch-bar {
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem;
+  padding: .5rem 1.2rem; border-bottom: 1px solid var(--border);
+  background: rgba(240,163,94,.08); font-size: .82rem;
+}
+.branch-bar.hidden { display: none; }
+.branch-chip {
+  background: var(--panel-2); border: 1px solid var(--accent-2);
+  border-radius: 20px; padding: .2rem .6rem;
+}
+.branch-bar button { padding: .25rem .7rem; }
+table#grid thead th.branched-col {
+  color: #08111f; background: var(--accent-2);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.25);
+}

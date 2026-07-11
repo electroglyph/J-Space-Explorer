@@ -54,7 +54,7 @@
         .map(([tok, coef], i) => {
           const w = Math.max(4, (coef / 15.8) * 100);
           return `<div class="atom"><span class="tok">${tok}</span><span class="coef">${coef.toFixed(2)}</span>` +
-            `<span class="acts"><button>steer</button><button>swap</button><button>ablate</button></span></div>` +
+            `<span class="acts"><button>steer</button><button>swap</button><button>ablate</button><button class="branch-btn">\u2387 branch</button></span></div>` +
             `<div class="bar"><span style="width:${w}%"></span></div>`;
         }).join("");
   }
@@ -155,6 +155,15 @@
         \u2022 <b>steer</b> \u2014 amplify or (with a negative value) suppress that concept.<br>
         \u2022 <b>ablate</b> \u2014 remove the concept entirely.<br>
         \u2022 <b>swap</b> \u2014 replace it with another word (e.g. <i>soccer \u2192 rugby</i>).`,
+    },
+    {
+      el: () => { demoPanel(); return document.querySelector("#panel-body .branch-btn"); },
+      before: () => demoPanel(),
+      title: "9b. Branch from here",
+      html: `Click <b>\u2387 branch</b> on an atom to <i>replace that token in the context</i> with the atom's
+        token and re-run the whole lens on the branched context. It's a counterfactual: change a word far
+        back (e.g. \u201cFrance\u201d \u2192 \u201cJapan\u201d) and watch how the model's downstream thinking shifts
+        (\u201cParis\u201d \u2192 \u201cTokyo\u201d). Edits accumulate; <b>reset</b> returns to the original.`,
     },
     {
       el: () => { demoIntervention(); return $("intervention-bar"); },

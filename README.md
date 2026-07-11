@@ -69,6 +69,12 @@ cp jspace.local.env.example jspace.local.env   # edit: model path, port, etc.
   the concept, negative suppresses it), **ablate** it (remove that direction
   entirely), or **swap** it for another word (e.g. soccer → rugby). Steered vs
   baseline output are shown side by side.
+- **Branch from here** — in a J-space decomposition, click **⎇ branch** on any
+  atom to replace *that token position* in the context with the atom's token and
+  re-run the whole lens on the branched context. Lets you see how a change far
+  back in the context reshapes the model's downstream thinking (e.g. swap
+  "France" → "Japan" and watch the answer become "Tokyo"). Edits accumulate and
+  can be reset.
 - **Live English translation** — non-English J-lens tokens (e.g. 巴黎, 京) are
   glossed to English inline, using the loaded multilingual model itself.
 - **Interactive guided tour** — a built-in, dependency-free walkthrough (✨ Tour)
@@ -80,6 +86,8 @@ cp jspace.local.env.example jspace.local.env   # edit: model path, port, etc.
   model's EOS/stop tokens, with a Stop button to interrupt.
 
 ![The interactive guided tour](docs/screenshot-tour.png)
+
+![Branching the context from a J-space atom](docs/screenshot-branch.png)
 
 ## Why not llama.cpp / GGUF here?
 

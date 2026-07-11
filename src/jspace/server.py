@@ -31,6 +31,24 @@ class LensRequest(BaseModel):
     corpus: Optional[list[str]] = None
 
 
+class BranchRequest(BaseModel):
+    """Replace the token at ``position`` with ``branch_token_id`` and re-run the
+    lens on the modified context — to see how a change far back in the context
+    reshapes the model's downstream thinking."""
+    prompt: str = ""
+    messages: Optional[list[dict]] = None
+    # One or more position->token edits, applied to the freshly-built input_ids
+    # of prompt/messages. Accumulating edits (rather than re-tokenizing decoded
+    # text) keeps the branched context exact.
+    edits: list[dict] = []
+    method: str = "logit"
+    layers: Optional[list[int]] = None
+    top_k: Optional[int] = None
+    use_chat_template: bool = True
+    corpus: Optional[list[str]] = None
+    at_generation_point: bool = True
+
+
 class GenerateRequest(BaseModel):
     prompt: str
     max_new_tokens: int = 128
@@ -213,6 +231,60 @@ def create_app(config: Optional[AppConfig] = None,
             return result.to_dict()
         except Exception as exc:
             logger.exception("lens failed")
+            raise HTTPException(status_code=500, detail=str(exc))
+
+    @app.post("/api/branch")
+    def branch(req: BranchRequest):
+        """Replace the token at ``position`` with ``branch_token_id`` and re-run
+        the lens on the modified context.
+
+        The swap happens at the exact input_ids index, so a change far back in
+        the context propagates through every downstream position's readout.
+        """
+        try:
+            engine = service.engine
+            model = engine.model
+            # Rebuild the exact same input_ids the original lens saw.
+            if req.messages:
+                msgs = [{"role": m.get("role"), "content": m.get("content")}
+                        for m in req.messages]
+                input_ids = model.build_chat_ids(
+                    msgs, add_generation_prompt=req.at_generation_point)
+            else:
+                input_ids = model.build_input_ids(
+                    req.prompt, req.use_chat_template)
+            seq_len = input_ids.shape[1]
+            branched = input_ids.clone()
+            applied = []
+            for e in req.edits:
+                pos = int(e.get("position", -1))
+                tid = int(e.get("branch_token_id", -1))
+                if not (0 <= pos < seq_len):
+                    raise ValueError(
+                        f"position {pos} out of range (0..{seq_len - 1})")
+                if not (0 <= tid < model.info.vocab_size):
+                    raise ValueError(f"branch_token_id {tid} out of vocab range")
+                branched[0, pos] = tid
+                applied.append({"position": pos, "branch_token_id": tid,
+                                "branch_token": model.decode_token(tid)})
+            if not applied:
+                raise ValueError("no edits provided")
+
+            if req.method == "jacobian":
+                result = engine.jacobian_lens(
+                    prompt="", layers=req.layers, corpus=req.corpus,
+                    top_k=req.top_k, input_ids=branched)
+            else:
+                result = engine.logit_lens(
+                    prompt="", layers=req.layers, top_k=req.top_k,
+                    input_ids=branched)
+            out = result.to_dict()
+            out["branch"] = {"edits": applied}
+            return out
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            logger.exception("branch failed")
             raise HTTPException(status_code=500, detail=str(exc))
 
     @app.post("/api/lens/stream")

@@ -5,6 +5,9 @@ const statusEl = $("status");
 let currentPrompt = "";
 let currentTokens = [];
 let currentMethod = "logit";
+// Accumulated branch edits (position -> replacement token) applied to the
+// current prompt/conversation. Cleared when a fresh lens run starts.
+let branchEdits = [];
 // token -> English gloss (accumulated across runs).
 const translations = {};
 // Every top token currently shown in the grid, for the translate pass.
@@ -158,6 +161,8 @@ function escapeHtml(s) {
 async function runLens() {
   const req = buildRequest();
   currentPrompt = req.prompt;
+  branchEdits = [];            // a fresh run starts from the unbranched context
+  if (typeof renderBranchBanner === "function") renderBranchBanner();
   $("run").disabled = true;
   statusEl.textContent = "running lens…";
   statusEl.className = "status";
@@ -328,6 +333,88 @@ async function decompose(layer, position) {
   }
 }
 
+// Replace the token at `position` with `tokenId` and re-run the lens on the
+// branched context, so we can see how a change far back affects downstream
+// thinking. Works in completion mode (updates the prompt to the branched text);
+// in chat mode it branches the templated context for this run.
+async function branchFrom(position, tokenId, label) {
+  const method = (mode === "chat") ? $("chat-method").value : $("method").value;
+  currentMethod = method;
+  $("panel").classList.add("hidden");
+  statusEl.textContent = `branching: token ${position} \u2192 ${label}\u2026`;
+  statusEl.className = "status";
+  try {
+    if (method === "jacobian") {
+      // Make sure the operator is fitted so the branched run is fast.
+      const fr = await fetch("/api/fit", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ layers: parseLayers() }),
+      });
+      if (fr.ok) await readSSE(fr, (ev) => {
+        if (ev.type === "fit_progress") statusEl.textContent = `fitting\u2026 ${ev.done}/${ev.total}`;
+      });
+    }
+    // Accumulate this edit on top of any prior branch edits at other positions.
+    // A repeat edit at the same position overrides the earlier one.
+    branchEdits = branchEdits.filter((e) => e.position !== position);
+    branchEdits.push({ position, branch_token_id: tokenId, label });
+    branchEdits.sort((a, b) => a.position - b.position);
+    const body = {
+      edits: branchEdits.map((e) => ({ position: e.position, branch_token_id: e.branch_token_id })),
+      method, layers: parseLayers(), top_k: parseInt($("topk").value, 10) || 6,
+      corpus: parseCorpus(), at_generation_point: true,
+    };
+    if (mode === "chat" && conversation.length) body.messages = conversation;
+    else { body.prompt = currentPrompt; body.use_chat_template = $("chat").checked; }
+    const r = await fetch("/api/branch", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error(await r.text());
+    const d = await r.json();
+    renderLensResult(d);
+    renderBranchBanner();
+    statusEl.textContent = `branched \u2713 (${branchEdits.length} edit${branchEdits.length === 1 ? "" : "s"})`;
+    statusEl.className = "status ok";
+    if ($("translate").checked) applyTranslations();
+  } catch (e) {
+    // Roll back the just-added edit on failure.
+    branchEdits = branchEdits.filter((e2) => e2.position !== position);
+    statusEl.textContent = "branch error: " + e.message;
+    statusEl.className = "status err";
+  }
+}
+
+// Show a small banner listing active branch edits, with a reset control. Also
+// mark the branched columns in the grid header.
+function renderBranchBanner() {
+  let bar = $("branch-bar");
+  if (!bar) {
+    bar = document.createElement("div");
+    bar.id = "branch-bar";
+    bar.className = "branch-bar";
+    $("legend").insertAdjacentElement("afterend", bar);
+  }
+  if (!branchEdits.length) { bar.classList.add("hidden"); bar.innerHTML = ""; return; }
+  bar.classList.remove("hidden");
+  const chips = branchEdits.map((e) =>
+    `<span class="branch-chip">pos ${e.position} \u2192 <b>${escapeHtml(fmtTok(TR(e.label)))}</b></span>`).join("");
+  bar.innerHTML = `<span class="muted">\u2387 branched context:</span> ${chips}` +
+    `<button id="branch-reset" class="secondary">reset</button>`;
+  $("branch-reset").addEventListener("click", resetBranch);
+  // Highlight the edited columns.
+  branchEdits.forEach((e) => {
+    const th = document.querySelector(`#grid thead th.col-${e.position}`);
+    if (th) th.classList.add("branched-col");
+  });
+}
+
+function resetBranch() {
+  branchEdits = [];
+  renderBranchBanner();
+  runLens();  // re-run on the original, unbranched context
+}
+
 function renderDecomp(d) {
   const body = $("panel-body");
   const tok = currentTokens[d.position] !== undefined ? currentTokens[d.position] : "?";
@@ -349,6 +436,7 @@ function renderDecomp(d) {
       `<button data-iv="steer" data-layer="${d.layer}" data-token="${a.token_id}" data-label="${escapeHtml(a.token)}">steer</button>` +
       `<button data-iv="swap" data-layer="${d.layer}" data-token="${a.token_id}" data-label="${escapeHtml(a.token)}">swap</button>` +
       `<button data-iv="ablate" data-layer="${d.layer}" data-token="${a.token_id}" data-label="${escapeHtml(a.token)}">ablate</button>` +
+      `<button class="branch-btn" data-branch-token="${a.token_id}" data-label="${escapeHtml(a.token)}" title="Replace token ${d.position} with this and re-run the lens">\u2387 branch</button>` +
       `</span>`;
     return `<div class="atom"><span class="tok">${label}</span>` +
       `<span class="coef">${a.coefficient.toFixed(3)}</span>${acts}</div>` +
@@ -364,6 +452,15 @@ function renderDecomp(d) {
       token_id: parseInt(btn.dataset.token, 10),
       label: btn.dataset.label,
     }));
+  });
+  // Wire the per-atom "branch from here" buttons. They replace the token at
+  // THIS cell's position with the atom's token and re-run the lens.
+  body.querySelectorAll(".branch-btn").forEach((btn) => {
+    btn.addEventListener("click", () => branchFrom(
+      d.position,
+      parseInt(btn.dataset.branchToken, 10),
+      btn.dataset.label,
+    ));
   });
 }
 
@@ -473,6 +570,11 @@ async function chatLens() {
 function renderLensResult(d) {
   initGrid({ tokens: d.tokens, layers: d.layers, method: d.method });
   d.cells.forEach(renderCell);
+  // Persist the branched-column highlight across re-renders.
+  branchEdits.forEach((e) => {
+    const th = document.querySelector(`#grid thead th.col-${e.position}`);
+    if (th) th.classList.add("branched-col");
+  });
 }
 
 $("chat-send").addEventListener("click", chatSend);
