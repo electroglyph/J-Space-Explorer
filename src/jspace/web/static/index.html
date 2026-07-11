@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>J-Space Explorer</title>
+  <link rel="stylesheet" href="/static/style.css?v=3" />
+</head>
+<body>
+  <header>
+    <h1>J-Space Explorer</h1>
+    <div class="mode-switch">
+      <button id="mode-completion" class="mode-btn active">Completion</button>
+      <button id="mode-chat" class="mode-btn">Chat</button>
+    </div>
+    <button id="tour-start" class="tour-start" title="Guided tour of the app">✨ Tour</button>
+    <div id="status" class="status">checking model…</div>
+  </header>
+
+  <!-- ===================== Completion controls ===================== -->
+  <section class="controls" id="completion-controls">
+    <textarea id="prompt" rows="3" placeholder="Enter a prompt, e.g. 'Count to five and introspect deeply.'">The capital of France is</textarea>
+    <div class="row">
+      <label>Method
+        <select id="method">
+          <option value="logit">Logit lens (fast)</option>
+          <option value="jacobian">Jacobian lens (J-lens)</option>
+        </select>
+      </label>
+      <label>Top-k
+        <input id="topk" type="number" value="6" min="1" max="20" />
+      </label>
+      <label>Layers
+        <input id="layers" type="text" placeholder="all, or e.g. 0,8,16,24,32" />
+      </label>
+      <label class="check"><input id="chat" type="checkbox" /> chat template</label>
+      <label class="check"><input id="translate" type="checkbox" checked /> translate to English</label>
+      <button id="run">Run lens</button>
+      <button id="stream-run" class="secondary">Stream + lens ▶</button>
+      <label>gen tokens <input id="gen-max" type="number" value="60" min="1" max="512" /></label>
+      <button id="stream-stop" class="secondary hidden">Stop</button>
+    </div>
+    <div id="stream-out" class="stream-out hidden"></div>
+    <div class="row">
+      <details>
+        <summary>Jacobian averaging corpus (one context per line)</summary>
+        <textarea id="corpus" rows="4" placeholder="Leave blank to use the built-in default corpus."></textarea>
+      </details>
+    </div>
+  </section>
+
+  <!-- ===================== Chat controls ===================== -->
+  <section class="controls hidden" id="chat-controls">
+    <div id="conversation" class="conversation"></div>
+    <div class="row">
+      <textarea id="chat-input" rows="2" placeholder="Message the model… (Ctrl+Enter to send)"></textarea>
+    </div>
+    <div class="row">
+      <button id="chat-send">Send</button>
+      <button id="chat-lens" class="secondary">Lens on last reply</button>
+      <button id="chat-reset" class="secondary">Reset</button>
+      <label>method
+        <select id="chat-method">
+          <option value="logit">Logit</option>
+          <option value="jacobian">Jacobian</option>
+        </select>
+      </label>
+    </div>
+    <div class="row sampling">
+      <label>temp <input id="s-temp" type="number" value="0.7" step="0.1" min="0" max="2" /></label>
+      <label>top-p <input id="s-topp" type="number" value="0.9" step="0.05" min="0" max="1" /></label>
+      <label>top-k <input id="s-topk" type="number" value="" placeholder="off" min="0" /></label>
+      <label>min-p <input id="s-minp" type="number" value="" placeholder="off" step="0.01" min="0" max="1" /></label>
+      <label>max tokens <input id="s-max" type="number" value="200" min="1" max="1024" /></label>
+    </div>
+  </section>
+
+  <!-- ===================== Intervention bar ===================== -->
+  <section id="intervention-bar" class="intervention-bar hidden">
+    <div class="iv-head">
+      <b>J-space edits</b>
+      <span class="muted">steer / swap concepts in the model's workspace, then generate</span>
+      <button id="iv-clear" class="secondary">clear</button>
+    </div>
+    <div id="iv-list" class="iv-list"></div>
+    <div class="row">
+      <button id="iv-run">Generate with edits</button>
+      <span class="muted">applies to the current prompt / conversation</span>
+    </div>
+    <div id="iv-output" class="iv-output hidden"></div>
+  </section>
+
+  <section id="legend" class="legend hidden">
+    Hover a cell for full top-k. Click a cell to decompose it into J-space atoms — then <b>steer</b> or <b>swap</b> those concepts.
+  </section>
+
+  <div id="grid-wrap" class="grid-wrap">
+    <table id="grid"></table>
+  </div>
+
+  <aside id="panel" class="panel hidden">
+    <button id="panel-close">×</button>
+    <h3 id="panel-title">J-space decomposition</h3>
+    <div id="panel-body"></div>
+  </aside>
+
+  <!-- ===================== Guided tour overlay ===================== -->
+  <div id="tour-overlay" class="tour-overlay hidden">
+    <div id="tour-spotlight" class="tour-spotlight"></div>
+    <div id="tour-pop" class="tour-pop">
+      <div id="tour-step" class="tour-step">1 / 1</div>
+      <h3 id="tour-title">Title</h3>
+      <div id="tour-text" class="tour-text">Body</div>
+      <div class="tour-nav">
+        <button id="tour-skip" class="secondary">Skip tour</button>
+        <span class="tour-spacer"></span>
+        <button id="tour-back" class="secondary">Back</button>
+        <button id="tour-next">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js?v=3"></script>
+  <script src="/static/tour.js?v=3"></script>
+</body>
+</html>

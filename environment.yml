@@ -1,0 +1,36 @@
+# Conda environment for the J-Space Explorer.
+# Create with:  conda env create -f environment.yml
+# Update with:  conda env update -f environment.yml --prune
+# Activate with: conda activate jspace
+name: jspace
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+dependencies:
+  # Python 3.11 is the sweet spot for the current ML stack (torch, transformers,
+  # unsloth). 3.12+ still has occasional wheel gaps for the interp tooling.
+  - python=3.11
+  - pip
+  # CUDA-enabled PyTorch. cu121 matches the driver shipped with recent 3090 setups.
+  - pytorch::pytorch=2.4.*
+  - pytorch::pytorch-cuda=12.1
+  - numpy
+  - pip:
+      # transformers must be recent enough to know the `qwen3_5` architecture.
+      # If your installed version predates it, see README (falls back to trust_remote_code).
+      - "transformers>=4.57.0"
+      - accelerate>=0.34.0
+      - safetensors>=0.4.5
+      - sentencepiece
+      - tokenizers>=0.20
+      - einops
+      # Fast local inference path (used for generation; see README for the
+      # llama.cpp alternative). Unsloth is optional at runtime and imported lazily.
+      - "unsloth ; platform_system == 'Linux'"
+      # Web backend
+      - fastapi>=0.115
+      - "uvicorn[standard]>=0.30"
+      - pydantic>=2.7
+      - sse-starlette>=2.1
+      - python-multipart

@@ -1,0 +1,43 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+*.so
+
+# Editor / tooling indexes
+.locus/
+.grape/
+.playwright-mcp/
+.idea/
+.vscode/
+
+# Fitted lens cache (can be several GB) and any local model dumps
+*.pt
+*.safetensors
+lens_cache/
+
+# Conda / venv
+.venv/
+venv/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Screenshots / scratch
+*.local.png
+scratch/
+
+# Local / personal config (keep the .example, ignore the real one)
+.env
+jspace.local.env
+*.local.env
+GRAPE.md
+
+# Research notes kept local
+docs/NLA-notes.md
+NLA-notes.md
+screenshot.png

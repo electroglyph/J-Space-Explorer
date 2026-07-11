@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jspace-explorer"
+version = "0.1.0"
+description = "Interactive explorer for the J-space / Jacobian lens of local safetensors language models."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Sweaterdog" }]
+keywords = ["interpretability", "jacobian-lens", "j-space", "transformers", "llm"]
+dependencies = [
+    "torch>=2.2",
+    "transformers>=4.57.0",
+    "accelerate>=0.34.0",
+    "safetensors>=0.4.5",
+    "numpy",
+    "einops",
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "pydantic>=2.7",
+    "sse-starlette>=2.1",
+    "python-multipart",
+]
+
+[project.optional-dependencies]
+fast = ["unsloth"]
+
+[project.urls]
+Homepage = "https://github.com/Sweaterdog/J-Space-Explorer"
+Repository = "https://github.com/Sweaterdog/J-Space-Explorer"
+Issues = "https://github.com/Sweaterdog/J-Space-Explorer/issues"
+
+[project.scripts]
+jspace = "jspace.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+jspace = ["web/static/*"]
