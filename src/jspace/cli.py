@@ -16,6 +16,8 @@ from .config import AppConfig
 
 def _add_common(p: argparse.ArgumentParser) -> None:
     p.add_argument("--model", help="Path to the model directory (safetensors).")
+    p.add_argument("--dtype", choices=["bfloat16", "float16", "float32"],
+                   help="Model dtype (default: bfloat16).")
     p.add_argument("--no-chat-template", action="store_true",
                    help="Do not wrap the prompt in the chat template.")
 
@@ -54,6 +56,8 @@ def main(argv: list[str] | None = None) -> int:
     config = AppConfig.from_env()
     if getattr(args, "model", None):
         config.model.path = args.model
+    if getattr(args, "dtype", None):
+        config.model.dtype = args.dtype
 
     if args.command == "serve":
         return _serve(args, config)
