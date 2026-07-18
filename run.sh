@@ -19,11 +19,19 @@ PORT="${JSPACE_PORT:-8000}"
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$HERE"
 
-# shellcheck disable=SC1091
-source "$(conda info --base)/etc/profile.d/conda.sh"
-set +u
-conda activate "${ENV_NAME}"
-set -u
+if command -v conda &>/dev/null; then
+  # shellcheck disable=SC1091
+  source "$(conda info --base)/etc/profile.d/conda.sh"
+  set +u
+  conda activate "${ENV_NAME}"
+  set -u
+elif [ -f .venv/bin/activate ]; then
+  # shellcheck disable=SC1091
+  source .venv/bin/activate
+else
+  echo "error: no conda and no .venv/bin/activate — run setup.sh or create a venv first" >&2
+  exit 1
+fi
 
 # Avoid a deprecated/warning-noisy HF transfer path.
 export HF_HUB_ENABLE_HF_TRANSFER=0

@@ -27,6 +27,9 @@ cd J-Space-Explorer
 ./setup.sh                                   # conda env 'jspace' + install
 conda activate jspace
 export JSPACE_MODEL_PATH=/path/to/your/model # a local safetensors model dir
+-or for fish shell-
+set -gx JSPACE_MODEL_PATH "/path/to/your/model"
+
 ./run.sh                                     # open http://127.0.0.1:8000
 ```
 
@@ -99,12 +102,36 @@ HuggingFace `transformers` (autograd + `output_hidden_states`). For the plain
 (`pip install -e '.[fast]'`) or point a separate llama.cpp server at the same
 weights; generation is decoupled from the lens math.
 
-## Setup (conda)
+## Setup
+
+### conda (recommended)
 
 ```bash
 conda env create -f environment.yml
 conda activate jspace
 pip install -e .
+```
+
+### pip / uv (no conda)
+
+Create a venv, install PyTorch with CUDA, then the rest:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate -or- source .venv/bin/activate.fish for arch
+pip install torch --index-url https://download.pytorch.org/whl/cu121
+pip install -r requirements.txt
+pip install -e .
+```
+
+Or with uv:
+
+```bash
+uv venv --python 3.11
+source .venv/bin/activate -or- source .venv/bin/activate.fish for arch
+uv pip install torch --index-url https://download.pytorch.org/whl/cu121
+uv pip install -r requirements.txt
+uv pip install -e .
 ```
 
 The default model is the local Qwen3.5-based checkpoint at

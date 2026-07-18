@@ -1,0 +1,16 @@
+# Core ML
+torch>=2.2
+transformers>=4.57.0
+accelerate>=0.34.0
+safetensors>=0.4.5
+numpy
+einops
+sentencepiece
+tokenizers>=0.20
+
+# Web backend
+fastapi>=0.115
+uvicorn[standard]>=0.30
+pydantic>=2.7
+sse-starlette>=2.1
+python-multipart
